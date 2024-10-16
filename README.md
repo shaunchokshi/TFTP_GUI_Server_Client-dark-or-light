@@ -10,13 +10,13 @@
 - **Change Working Directory:** Modify the current working directory for file transfers with a straightforward interface.
 - **View Directory Contents:** Quickly access and view files in the current working directory.
 - **Logging:** Track server activity with real-time logging displayed in the application and stored in a log file.
-
+[tftp_server](../TFTP_GUI_Server_Client/screenshot).png
 ### TFTP Client
 - **Upload Files:** Seamlessly upload files to a TFTP server using a simple interface.
 - **Download Files:** Effortlessly download files from a TFTP server with progress monitoring.
 - **File Browsing:** Use an integrated file dialog for easy file selection.
 - **Status Updates:** Receive real-time status updates during upload and download processes.
-
+[tftp_client](../TFTP_GUI_Server_Client/screenshot).png
 ### Monitoring and Alerts
 - Monitor TFTP server activities and transfer statuses with immediate feedback on successes or failures.
 - Real-time updates ensure that users can track the progress of their operations.
