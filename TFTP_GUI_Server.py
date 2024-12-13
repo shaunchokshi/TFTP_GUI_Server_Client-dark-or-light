@@ -4,8 +4,10 @@ import threading
 import socket
 import logging
 from PyQt5 import QtWidgets, QtGui, QtCore
-from tftp.TFTPServer import TftpPacketDAT, TftpPacketERR, TftpServer
+from tftp.TFTPServer import TftpServer, TftpPacketDAT, TftpPacketERR
 from tftp.TftpClient import TftpClient
+import psutil
+
 # Logging Configuration
 logger = logging.getLogger('tftp_server')
 logger.setLevel(logging.INFO)
@@ -14,9 +16,6 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-import socket
-
-import psutil
 
 def get_ip_addresses():
     """Get the list of available IP addresses on the local machine across all interfaces."""
@@ -26,9 +25,10 @@ def get_ip_addresses():
         for address in addresses:
             if address.family == socket.AF_INET:  # IPv4 addresses only
                 ip_addresses.append(address.address)
-    
+
     # Remove duplicates and return the list of IP addresses
     return list(set(ip_addresses))
+
 
 class TFTPServer(QtWidgets.QWidget):
     def __init__(self):
@@ -51,7 +51,7 @@ class TFTPServer(QtWidgets.QWidget):
         self.stop_button.setEnabled(False)
 
         self.status_label = QtWidgets.QLabel("Server Status: Stopped", self)
-        self.status_label.setStyleSheet("font-weight: bold; color: red;")
+        # We'll change status_label colors dynamically as needed.
 
         self.port_input = QtWidgets.QSpinBox(self)
         self.port_input.setRange(1, 65535)
@@ -93,7 +93,6 @@ class TFTPServer(QtWidgets.QWidget):
         layout.addWidget(self.log_output)
 
         self.setLayout(layout)
-        self.setStyleSheet("background-color: #f0f0f0; font-family: Arial;")
 
     def start_server(self):
         if not self.server:
@@ -130,6 +129,7 @@ class TFTPServer(QtWidgets.QWidget):
         self.dir_window = DirectoryView(self.current_directory)
         self.dir_window.show()
 
+
 class TextHandler(logging.Handler):
     """Custom logging handler to write logs to a QTextEdit."""
     def __init__(self, text_edit):
@@ -139,6 +139,7 @@ class TextHandler(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.text_edit.append(msg)
+
 
 class DirectoryView(QtWidgets.QDialog):
     def __init__(self, directory):
@@ -172,6 +173,7 @@ class DirectoryView(QtWidgets.QDialog):
             QtWidgets.QApplication.clipboard().setText(file_name)
             QtWidgets.QMessageBox.information(self, "Copy Name", f"Copied: {file_name}")
 
+
 class TFTPClient(QtWidgets.QWidget):
     log_signal = QtCore.pyqtSignal(str)  # Signal to update log
 
@@ -186,7 +188,7 @@ class TFTPClient(QtWidgets.QWidget):
         # Separate inputs for upload and download
         self.upload_file_input = QtWidgets.QLineEdit(self)
         self.upload_file_input.setPlaceholderText("Select File to Upload")
-        
+
         self.download_file_input = QtWidgets.QLineEdit(self)
         self.download_file_input.setPlaceholderText("Enter File Name to Download")
 
@@ -238,7 +240,6 @@ class TFTPClient(QtWidgets.QWidget):
         layout.addWidget(self.log_output)
 
         self.setLayout(layout)
-        self.setStyleSheet("background-color: #f0f0f0; font-family: Arial;")
 
         self.total_size = 0
         self.downloaded_size = 0
@@ -263,7 +264,7 @@ class TFTPClient(QtWidgets.QWidget):
         if self.use_folder_checkbox.isChecked():
             # Open a dialog to select the folder for saving the downloaded file
             folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Folder to Save Downloaded File")
-            
+
             if folder:  # Proceed only if a folder was selected
                 self.status_label.setText("Status: Downloading...")
                 self.log_output.clear()  # Clear previous logs
@@ -276,7 +277,7 @@ class TFTPClient(QtWidgets.QWidget):
             else:
                 self.log_signal.emit("Download canceled: No folder selected.")
         else:
-            # Default save path (you can modify this to your preferred default directory)
+            # Default save path
             default_directory = self.get_default_directory()
             full_path = os.path.join(default_directory, filename)
 
@@ -302,7 +303,6 @@ class TFTPClient(QtWidgets.QWidget):
                 if isinstance(packet, TftpPacketERR):
                     self.log_signal.emit(f"Error: {packet.errmsg.decode()}")
                     return
-                
                 # Check for DAT packets (data packets)
                 if isinstance(packet, TftpPacketDAT):
                     self.downloaded_size += len(packet.data)
@@ -339,7 +339,7 @@ class TFTPClient(QtWidgets.QWidget):
                 if isinstance(packet, TftpPacketERR):
                     self.log_signal.emit(f"Error: {packet.errmsg.decode()}")
                     return
-                
+
                 # Check for DAT packets (data packets)
                 if isinstance(packet, TftpPacketDAT):
                     self.downloaded_size += len(packet.data)
@@ -357,21 +357,102 @@ class TFTPClient(QtWidgets.QWidget):
 
     def update_log(self, message):
         self.log_output.append(message)
-        self.log_output.moveCursor(QtGui.QTextCursor.End)  # Scroll to the bottom
+        self.log_output.moveCursor(QtGui.QTextCursor.End)
 
 
-class MainApp(QtWidgets.QTabWidget):
+class MainApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.addTab(TFTPServer(), "TFTP Server")
-        self.addTab(TFTPClient(), "TFTP Client")
-        self.setStyleSheet("QTabWidget::pane { border: 1px solid #cccccc; }")
+        self.setWindowTitle("TFTP Client/Server by petrunetworking")
+        self.setGeometry(100, 100, 800, 500)
+
+        # Create tabs
+        self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_widget.addTab(TFTPServer(), "TFTP Server")
+        self.tab_widget.addTab(TFTPClient(), "TFTP Client")
+
+        # Theme selection
+        self.light_theme_radio = QtWidgets.QRadioButton("Light Theme")
+        self.dark_theme_radio = QtWidgets.QRadioButton("Dark Theme")
+        self.light_theme_radio.setChecked(True)  # Default to Light theme
+
+        self.light_theme_radio.toggled.connect(self.on_theme_changed)
+        self.dark_theme_radio.toggled.connect(self.on_theme_changed)
+
+        theme_layout = QtWidgets.QHBoxLayout()
+        theme_layout.addWidget(self.light_theme_radio)
+        theme_layout.addWidget(self.dark_theme_radio)
+        theme_layout.addStretch()
+
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.addLayout(theme_layout)
+        main_layout.addWidget(self.tab_widget)
+
+        self.setLayout(main_layout)
+
+        # Apply the default (light) theme initially
+        self.apply_theme("light")
+
+    def on_theme_changed(self):
+        if self.light_theme_radio.isChecked():
+            self.apply_theme("light")
+        else:
+            self.apply_theme("dark")
+
+    def apply_theme(self, theme):
+        if theme == "light":
+            # Light theme stylesheet
+            qss = """
+            QWidget {
+                background-color: #eaeaea;
+                color: #000000;
+                font-family: Arial;
+            }
+            QPushButton {
+                background-color: #f0f0f0;
+                color: #000000;
+            }
+            QLineEdit, QSpinBox, QComboBox, QTextEdit, QListWidget {
+                background-color: #ffffff;
+                color: #000000;
+            }
+            QLabel {
+                color: #000000;
+            }
+            QTabWidget::pane {
+                border: 1px solid #cccccc;
+            }
+            """
+        else:
+            # Dark theme stylesheet
+            qss = """
+            QWidget {
+                background-color: #2e2e2e;
+                color: #ffffff;
+                font-family: Arial;
+            }
+            QPushButton {
+                background-color: #4f4f4f;
+                color: #ffffff;
+            }
+            QLineEdit, QSpinBox, QComboBox, QTextEdit, QListWidget {
+                background-color: #3c3c3c;
+                color: #ffffff;
+            }
+            QLabel {
+                color: #ffffff;
+            }
+            QTabWidget::pane {
+                border: 1px solid #555555;
+            }
+            """
+
+        # Apply the stylesheet to the entire application
+        QtWidgets.QApplication.instance().setStyleSheet(qss)
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     main_app = MainApp()
-    main_app.setWindowTitle("TFTP Client/Server by petrunetworking")
-    main_app.setGeometry(100, 100, 800, 500)
-    main_app.setStyleSheet("background-color: #eaeaea; font-family: Arial;")
     main_app.show()
     sys.exit(app.exec_())
